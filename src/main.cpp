@@ -9,34 +9,54 @@
 #define DATABASE_URL "env.firebasedatabase_url"
 #define DATABASE_SECRET "env.firebasedatabase_secret"
 
+#define SERVO_PIN 25
+
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 unsigned long lastFirebaseWrite = 0;
 const unsigned long firebaseWriteInterval = 5000;
 
+Servo myservo;
+
+void configureWiFi();
 void configureFirebase();
 void writeUptimeToFirebase();
+void attachServo();
 
 void setup() {
   Serial.begin(9600);
 
+  configureWiFi();
+  configureFirebase();
+  myservo.attach(SERVO_PIN);
+}
+
+void loop() {
+  attachServo();
+
+  int open = 0;
+  int close = 180;
+
+  myservo.write(open);
+  delay(2000);
+  myservo.write(close);
+  delay(2000);
+
+  if (millis() - lastFirebaseWrite >= firebaseWriteInterval) {
+    lastFirebaseWrite = millis();
+
+    writeUptimeToFirebase();
+  }
+}
+
+void configureWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(250);
     Serial.print('.');
   }
   Serial.println("WiFi connected");
-
-  configureFirebase();
-}
-
-void loop() {
-  if (millis() - lastFirebaseWrite >= firebaseWriteInterval) {
-    lastFirebaseWrite = millis();
-
-    writeUptimeToFirebase();
-  }
 }
 
 void configureFirebase() {
@@ -60,4 +80,11 @@ void writeUptimeToFirebase() {
     Serial.print("RTDB write failed: ");
     Serial.println(fbdo.errorReason());
   }
+}
+
+void attachServo() {
+	if (!myservo.attached()) {
+		myservo.setPeriodHertz(50);
+		myservo.attach(SERVO_PIN, 1000, 2000);
+	}
 }
